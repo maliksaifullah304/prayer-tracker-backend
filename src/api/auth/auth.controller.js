@@ -91,4 +91,16 @@ const login = catchAsync(async (req, res, next) => {
   res.status(200).json({message: 'Login successful', userInfo});
 });
 
-module.exports = {createUser, login};
+const deActivateUser = catchAsync(async (req, res) => {
+  const user = await User.findByIdAndUpdate(req.params.id, {isActive: false});
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+  res.status(200).json({
+    status: 'success',
+    data: {
+      user,
+    },
+  });
+});
+module.exports = {createUser, login, deActivateUser};
