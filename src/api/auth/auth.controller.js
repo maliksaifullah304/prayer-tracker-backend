@@ -6,6 +6,7 @@ const catchAsync = require('../../utils/catchAsync');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const {PRAYER_NAMES, PRAYER_STATUSES} = require('../../utils/prayer');
+const {ROLES} = require('../../utils/user');
 
 const createUser = catchAsync(async (req, res) => {
   // Start a MongoDB session for the transaction
@@ -71,13 +72,10 @@ const login = catchAsync(async (req, res, next) => {
   if (!user || !(await bcrypt.compareSync(password, user.password))) {
     return next(new AppError('Invalid email or password.', 401));
   }
-  const token = jwt.sign(
-    {id: user.id, username: user.username},
-    process.env.JWT_SECRET,
-    {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    }
-  );
+  const {password: userPassword, ...userInfo} = user._doc;
+  const token = jwt.sign(userInfo, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
 
   const cookiesOpts = {
     httpOnly: true,
@@ -86,7 +84,6 @@ const login = catchAsync(async (req, res, next) => {
     maxAge: 96 * 60 * 60 * 1000,
   };
   res.cookie(process.env.TOKEN_VARIABLE, token, cookiesOpts);
-  const {password: userPassword, ...userInfo} = user._doc;
 
   res.status(200).json({message: 'Login successful', userInfo});
 });
@@ -103,4 +100,14 @@ const deActivateUser = catchAsync(async (req, res) => {
     },
   });
 });
-module.exports = {createUser, login, deActivateUser};
+
+const getAllUsers = catchAsync(async (req, res) => {
+  const users = await User.find({role: ROLES.USER}).select('-password');
+  res.status(200).json({
+    status: 'success',
+    data: {
+      users,
+    },
+  });
+});
+module.exports = {createUser, login, deActivateUser, getAllUsers};

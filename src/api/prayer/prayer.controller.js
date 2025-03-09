@@ -40,10 +40,7 @@ const updatePrayerStatus = catchAsync(async (req, res) => {
       prayerName: req.body.prayerName,
       status: req.body.status,
     });
-  } else {
-    // Update existing prayer status
-    prayerToUpdate.status = req.body.status;
-  }
+  } else prayerToUpdate.status = req.body.status;
 
   // Save the updated document
   await prayerDoc.save();
