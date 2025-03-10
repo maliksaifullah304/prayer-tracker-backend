@@ -69,9 +69,12 @@ const createUser = catchAsync(async (req, res) => {
 const login = catchAsync(async (req, res, next) => {
   const {email, password} = req.body;
   const user = await User.findOne({email});
-  if (!user || !(await bcrypt.compareSync(password, user.password))) {
+  if (!user || !(await bcrypt.compareSync(password, user.password)))
     return next(new AppError('Invalid email or password.', 401));
-  }
+
+  if (!user.isActive)
+    return next(new AppError('Your account is blocked contact admin', 401));
+
   const {password: userPassword, ...userInfo} = user._doc;
   const token = jwt.sign(userInfo, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
@@ -88,8 +91,27 @@ const login = catchAsync(async (req, res, next) => {
   res.status(200).json({message: 'Login successful', userInfo});
 });
 
+const logout = catchAsync(async (req, res, next) => {
+  res.clearCookie(process.env.TOKEN_VARIABLE);
+
+  res.status(200).json({message: 'Logout successful'});
+});
+
 const deActivateUser = catchAsync(async (req, res) => {
   const user = await User.findByIdAndUpdate(req.params.id, {isActive: false});
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+  res.status(200).json({
+    status: 'success',
+    data: {
+      user,
+    },
+  });
+});
+
+const activateUser = catchAsync(async (req, res) => {
+  const user = await User.findByIdAndUpdate(req.params.id, {isActive: true});
   if (!user) {
     throw new AppError('User not found', 404);
   }
@@ -110,4 +132,11 @@ const getAllUsers = catchAsync(async (req, res) => {
     },
   });
 });
-module.exports = {createUser, login, deActivateUser, getAllUsers};
+module.exports = {
+  createUser,
+  login,
+  deActivateUser,
+  getAllUsers,
+  activateUser,
+  logout,
+};
