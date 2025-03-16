@@ -1,5 +1,6 @@
 const User = require('../../models/userModel');
 const Prayer = require('../../models/prayerModel');
+const UserModel = require('../../models/userModel');
 const AppError = require('../../utils/appError');
 const catchAsync = require('../../utils/catchAsync');
 
@@ -58,6 +59,23 @@ const updatePrayerStatus = catchAsync(async (req, res) => {
   });
 });
 
+const getPrayer = catchAsync(async (req, res) => {
+  const userId = req.user._id;
+
+  const prayer = await UserModel.findById(userId)
+    .populate('prayers')
+    .select('prayers');
+  if (!prayer) throw new AppError('Prayer not found', 404);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      prayer,
+    },
+  });
+});
+
 module.exports = {
   updatePrayerStatus,
+  getPrayer,
 };

@@ -4,6 +4,7 @@ const globalErrorHandler = require('./handler/errorHandler');
 const app = express();
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const {updatePrayersForUsers} = require('./utils/cronJobs');
 
 app.use(cookieParser());
 app.use(cors({credentials: true, origin: process.env.ALLOWED_URL}));
@@ -16,6 +17,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api', api);
+
+updatePrayersForUsers();
 app.use(globalErrorHandler);
 
 module.exports = app;
