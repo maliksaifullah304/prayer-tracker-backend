@@ -5,43 +5,38 @@ const PrayerModel = require('../models/prayerModel'); // Adjust the path as nece
 const {PRAYER_NAMES, PRAYER_STATUSES} = require('../utils/prayer'); // Adjust the path as necessary
 const {ROLES} = require('./user');
 const CronJobLog = require('../models/cronJobLog');
+const moment = require('moment');
 
 // Function to update prayers for users with specific roles
 const updatePrayersForUsers = async () => {
   try {
-    // Get the current date
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0); // Set to the start of the day
+    const todayDate = moment().utc().startOf('day'); // Get start of the current day in UTC
 
     // Check if the cron job has already run today
-    const jobLog = await CronJobLog.findOne({lastRun: {$gte: currentDate}});
-    if (jobLog && jobLog.lastRun >= currentDate) {
+    const jobLog = await CronJobLog.findOne({
+      lastRun: {$gte: todayDate.toDate()}, // Compare with start of the day
+    });
+
+    if (jobLog) {
       console.log('Cron job already ran today. Skipping...');
       return;
     }
 
     // Find all users with the specified roles
-    const users = await UserModel.find({role: ROLES.USER}); // Adjust roles as necessary
+    const users = await UserModel.find({role: ROLES.USER});
 
-    // Loop through each user
     for (const user of users) {
-      // Create a new prayers document for the current date
       const newPrayers = {
-        prayers: [
-          {
-            prayerStatus: Object.values(PRAYER_NAMES).map((prayerName) => ({
-              prayerName,
-              status: PRAYER_STATUSES.OFFER, // Set status to "offer"
-            })),
-            date: currentDate,
-          },
-        ],
+        prayers: Object.values(PRAYER_NAMES).map((prayerName) => ({
+          prayerName,
+          status: PRAYER_STATUSES.OFFER, // Set status to "offer"
+        })),
+        date: todayDate.toDate(), // Store as a Date object
       };
 
-      // Update the user's prayers document
       await PrayerModel.findByIdAndUpdate(
         user.prayers,
-        {$push: {prayers: newPrayers.prayers}},
+        {$push: {prayers: newPrayers}},
         {new: true, upsert: true}
       );
     }
@@ -49,7 +44,7 @@ const updatePrayersForUsers = async () => {
     // Log the cron job's last run time
     await CronJobLog.findOneAndUpdate(
       {jobName: 'updatePrayers'},
-      {lastRun: currentDate},
+      {lastRun: new Date()}, // Store exact run time
       {upsert: true}
     );
 
