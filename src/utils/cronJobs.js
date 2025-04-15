@@ -10,11 +10,11 @@ const moment = require('moment');
 // Function to update prayers for users with specific roles
 const updatePrayersForUsers = async () => {
   try {
-    const todayDate = moment().utc().startOf('day'); // Get start of the current day in UTC
+    const todayDate = moment().utc().startOf('day');
 
     // Check if the cron job has already run today
     const jobLog = await CronJobLog.findOne({
-      lastRun: {$gte: todayDate.toDate()}, // Compare with start of the day
+      lastRun: {$gte: todayDate.toDate()},
     });
 
     if (jobLog) {
@@ -26,17 +26,17 @@ const updatePrayersForUsers = async () => {
     const users = await UserModel.find({role: ROLES.USER});
 
     for (const user of users) {
-      const newPrayers = {
-        prayers: Object.values(PRAYER_NAMES).map((prayerName) => ({
+      const newPrayerEntry = {
+        prayerStatus: Object.values(PRAYER_NAMES).map((prayerName) => ({
           prayerName,
-          status: PRAYER_STATUSES.OFFER, // Set status to "offer"
+          status: PRAYER_STATUSES.OFFER,
         })),
-        date: todayDate.toDate(), // Store as a Date object
+        date: todayDate.toDate(),
       };
 
       await PrayerModel.findByIdAndUpdate(
         user.prayers,
-        {$push: {prayers: newPrayers}},
+        {$push: {prayers: newPrayerEntry}},
         {new: true, upsert: true}
       );
     }
@@ -44,7 +44,7 @@ const updatePrayersForUsers = async () => {
     // Log the cron job's last run time
     await CronJobLog.findOneAndUpdate(
       {jobName: 'updatePrayers'},
-      {lastRun: new Date()}, // Store exact run time
+      {lastRun: new Date()},
       {upsert: true}
     );
 

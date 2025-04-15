@@ -62,16 +62,14 @@ const updatePrayerStatus = catchAsync(async (req, res) => {
 const getPrayer = catchAsync(async (req, res) => {
   const userId = req.user._id;
 
-  const prayer = await UserModel.findById(userId)
+  const prayers = await UserModel.findById(userId)
     .populate('prayers')
     .select('prayers');
-  if (!prayer) throw new AppError('Prayer not found', 404);
+  if (!prayers) throw new AppError('Prayer not found', 404);
 
   res.status(200).json({
     status: 'success',
-    data: {
-      prayer,
-    },
+    prayers,
   });
 });
 
