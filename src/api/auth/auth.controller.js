@@ -124,14 +124,43 @@ const activateUser = catchAsync(async (req, res) => {
 });
 
 const getAllUsers = catchAsync(async (req, res) => {
-  const users = await User.find({role: ROLES.USER}).select('-password');
+  const users = await User.find({role: ROLES.USER})
+    .select('-password')
+    .populate({
+      path: 'prayers',
+      model: 'Prayers',
+    });
+
+  const usersWithPrayerCounts = users.map((user) => {
+    let offerCount = 0;
+    let missedCount = 0;
+
+    if (user.prayers && Array.isArray(user.prayers.prayers)) {
+      user.prayers.prayers.forEach((prayerEntry) => {
+        prayerEntry.prayerStatus.forEach((prayer) => {
+          if (prayer.status === 'Offer') offerCount++;
+          if (prayer.status === 'Missed') missedCount++;
+        });
+      });
+    }
+
+    const {prayers, ...rest} = user.toObject();
+
+    return {
+      ...rest,
+      totalOfferPrayers: offerCount,
+      totalMissedPrayers: missedCount,
+    };
+  });
+
   res.status(200).json({
     status: 'success',
     data: {
-      users,
+      users: usersWithPrayerCounts,
     },
   });
 });
+
 module.exports = {
   createUser,
   login,
